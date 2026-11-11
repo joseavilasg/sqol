@@ -90,6 +90,9 @@ jobs:
 
       - uses: ./.github/actions/binaries
 
+      - name: compile
+        run: pnpm exec tsc -p .
+
       # The extension version and the tag have to name the same release:
       # publishing 0.1.0 twice is refused by the Marketplace.
       - name: the tag names the extension version

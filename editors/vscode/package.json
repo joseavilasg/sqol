@@ -39,6 +39,7 @@
   },
   "scripts": {
     "compile": "tsc -p .",
+    "vscode:prepublish": "pnpm exec tsc -p .",
     "watch": "tsc -p . --watch",
     "lint": "biome check .",
     "format": "biome check --write .",
