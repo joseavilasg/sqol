@@ -1,0 +1,144 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - run: go vet ./...
+      - run: go test ./...
+      - run: go run ./... -l .
+
+  extension:
+    name: extension
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: editors/vscode
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: editors/vscode/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: editors/vscode/.node-version
+          cache: pnpm
+          cache-dependency-path: editors/vscode/pnpm-lock.yaml
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec biome check .
+      - run: pnpm exec tsc -p .
+      # Packaging is checked here too: a wrong ignore rule drops the entry
+      # point, and only the package step notices.
+      - name: install just
+        run: go install github.com/casey/just@v1.58.0
+        working-directory: .
+      - name: build the five binaries
+        run: just binaries
+        working-directory: .
+      - run: pnpm exec vsce package --out sqol.vsix
+
+  release:
+    name: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, extension]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # The Marketplace and Open VSX exchange this token for a session token,
+      # so no long-lived secret is stored in the repository.
+      id-token: write
+    defaults:
+      run:
+        working-directory: editors/vscode
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: editors/vscode/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: editors/vscode/.node-version
+          cache: pnpm
+          cache-dependency-path: editors/vscode/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+
+      # just is a Go program, so installing it needs no third-party action.
+      - name: install just
+        run: go install github.com/casey/just@v1.58.0
+        working-directory: .
+
+      # The extension version and the tag have to name the same release:
+      # publishing 0.1.0 twice is refused by the Marketplace.
+      - name: the tag names the extension version
+        shell: bash
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "${GITHUB_REF_NAME}" ]; then
+            echo "the tag is ${GITHUB_REF_NAME} and the extension says v$version"
+            exit 1
+          fi
+
+      - name: build the five binaries
+        run: just binaries
+        working-directory: .
+
+      - name: package the extension
+        run: pnpm exec vsce package --out "sqol-${GITHUB_REF_NAME}.vsix"
+
+      - name: publish to the Marketplace
+        run: pnpm exec vsce publish --packagePath "sqol-${GITHUB_REF_NAME}.vsix" --oidc
+
+      - name: publish to Open VSX
+        # Off until the namespace is claimed and its trusted publisher
+        # registered: claiming needs an extension already on the Marketplace,
+        # so the first release cannot publish here. Set the repository variable
+        # OVSX_READY to true afterwards.
+        if: vars.OVSX_READY == 'true'
+        run: pnpm exec ovsx publish "sqol-${GITHUB_REF_NAME}.vsix" --trusted-publishing
+
+      - name: checksums
+        run: sha256sum editors/vscode/bin/* > checksums.txt
+        working-directory: .
+
+      - name: release
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            checksums.txt \
+            "editors/vscode/sqol-${GITHUB_REF_NAME}.vsix" \
+            editors/vscode/bin/*
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: .

@@ -16,6 +16,7 @@ node_modules/
 !.vscode/tasks.json
 
 # Extension build output
-editors/vscode/bin/
+editors/vscode/bin/*
+!editors/vscode/bin/.gitkeep
 editors/vscode/out/
 *.vsix

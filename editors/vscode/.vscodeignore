@@ -2,6 +2,7 @@ src/
 node_modules/
 *.vsix
 **/*.map
+bin/.gitkeep
 .editorconfig
 .node-version
 biome.json

@@ -1,0 +1,1 @@
+# Keeps the folder present in a checkout, since go build does not create it.
