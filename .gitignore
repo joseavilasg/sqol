@@ -8,8 +8,12 @@
 
 # Editor and tooling state
 .qodo/
-.vscode/
 node_modules/
+
+# Editor settings are personal; the debug and task definitions are shared.
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
 
 # Extension build output
 editors/vscode/bin/
