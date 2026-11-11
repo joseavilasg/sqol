@@ -1,0 +1,54 @@
+{
+  "name": "sqol",
+  "displayName": "SQoL",
+  "description": "Format SQL with SQoL, an opinionated formatter that keeps one clause per line.",
+  "version": "0.1.0",
+  "publisher": "joseavilasg",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joseavilasg/sqol"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Formatters"
+  ],
+  "keywords": [
+    "sql",
+    "formatter",
+    "sqol"
+  ],
+  "activationEvents": [
+    "onLanguage:sql"
+  ],
+  "main": "./out/extension.js",
+  "packageManager": "pnpm@12.3.4",
+  "contributes": {
+    "configuration": {
+      "title": "SQoL",
+      "properties": {
+        "sqol.path": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to the `sqol` binary. Leave it empty to use the binary bundled with the extension, and fall back to `sqol` on `PATH` when that one does not match the platform."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -p . --watch",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.6",
+    "@types/node": "^24.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.6.0",
+    "typescript": "^5.9.0"
+  }
+}

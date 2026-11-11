@@ -1,0 +1,11 @@
+src/
+node_modules/
+*.vsix
+**/*.map
+.editorconfig
+.node-version
+biome.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+tsconfig.json
+.vscode/
