@@ -22,12 +22,13 @@
 // SELECT whose list continues on the next line, which moves the list under the
 // keyword.
 //
-// Usage: sqol [-root dir] [-check]
+// Usage: sqol [-l] [-w] [-d] [-stdin] [path ...]
 package main
 
 import (
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -43,52 +44,122 @@ var (
 )
 
 func main() {
-	root := flag.String("root", ".", "directory to walk for .sql files")
-	check := flag.Bool("check", false, "report files that would change instead of writing them")
+	list := flag.Bool("l", false, "list the files whose layout would change")
+	write := flag.Bool("w", false, "write the result to each file instead of standard output")
+	showDiff := flag.Bool("d", false, "print the changes as a unified diff")
+	fromStdin := flag.Bool("stdin", false, "read one document from standard input and print the result")
 	flag.Parse()
 
-	var changed []string
-	err := filepath.WalkDir(*root, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".sql") {
-			return err
+	if *fromStdin {
+		if err := formatStream(); err != nil {
+			fail(err)
 		}
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		formatted, err := settle(string(raw))
-		if err != nil {
-			return fmt.Errorf("%s: %w", path, err)
-		}
-		if formatted == string(raw) {
-			return nil
-		}
-		changed = append(changed, path)
-		if *check {
-			return nil
-		}
-		return os.WriteFile(path, []byte(formatted), 0o644)
-	})
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "sqol:", err)
-		os.Exit(1)
-	}
-
-	if len(changed) == 0 {
-		fmt.Println("sqol: every file already follows the shape")
 		return
 	}
-	verb := "rewrote"
-	if *check {
-		verb = "would rewrite"
+	if *write && *showDiff {
+		fail(fmt.Errorf("-w and -d cannot be combined: one writes, the other reports"))
 	}
-	fmt.Printf("sqol: %s %d files\n", verb, len(changed))
-	for _, path := range changed {
-		fmt.Printf("  %s\n", path)
+
+	files, err := collect(flag.Args())
+	if err != nil {
+		fail(err)
 	}
-	if *check {
+
+	differed := 0
+	for _, path := range files {
+		changed, err := rewrite(path, *list, *write, *showDiff)
+		if err != nil {
+			fail(err)
+		}
+		if changed {
+			differed++
+		}
+	}
+	if differed > 0 && (*list || *showDiff) {
 		os.Exit(1)
 	}
+}
+
+// fail reports an error the way a command line tool does and leaves.
+func fail(err error) {
+	fmt.Fprintln(os.Stderr, "sqol:", err)
+	os.Exit(2)
+}
+
+// collect lists the files to format: a named file as it is, and every .sql
+// file under a named directory. Without arguments it walks the working
+// directory.
+func collect(args []string) ([]string, error) {
+	if len(args) == 0 {
+		args = []string{"."}
+	}
+	var files []string
+	for _, arg := range args {
+		info, err := os.Stat(arg)
+		if err != nil {
+			return nil, err
+		}
+		if !info.IsDir() {
+			files = append(files, arg)
+			continue
+		}
+		err = filepath.WalkDir(arg, func(path string, entry fs.DirEntry, err error) error {
+			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".sql") {
+				return err
+			}
+			files = append(files, path)
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return files, nil
+}
+
+// rewrite formats one file and applies whichever result the flags asked for.
+// It reports whether the text changed.
+func rewrite(path string, list, write, showDiff bool) (bool, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return false, err
+	}
+	formatted, err := settle(string(raw))
+	if err != nil {
+		return false, fmt.Errorf("%s: %w", path, err)
+	}
+	if formatted == string(raw) {
+		return false, nil
+	}
+	switch {
+	case showDiff:
+		fmt.Print(unifiedDiff(string(raw), formatted, path))
+	case list:
+		fmt.Println(path)
+	}
+	if write {
+		if err := os.WriteFile(path, []byte(formatted), 0o644); err != nil {
+			return true, err
+		}
+	}
+	if !list && !write && !showDiff {
+		fmt.Print(formatted)
+	}
+	return true, nil
+}
+
+// formatStream formats one document read from standard input.
+func formatStream() error {
+	raw, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		return err
+	}
+	formatted, err := settle(string(raw))
+	if err != nil {
+		return err
+	}
+	_, err = os.Stdout.WriteString(formatted)
+	return err
 }
 
 // settle applies the rewrite until the text stops changing. One pass is enough

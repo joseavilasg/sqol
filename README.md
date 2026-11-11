@@ -40,11 +40,15 @@ The binary is `sqol`.
 
 ## Usage
 
-	sqol -root ./migrations          # rewrite every .sql file under the path
-	sqol -root ./migrations -check   # list what would change, exit 1 if any
+	sqol -l .              # list the files whose layout would change
+	sqol -w .              # rewrite them in place
+	sqol -d .              # print the change as a unified diff
+	sqol -stdin < q.sql    # format one document from standard input
 
-The CI job runs `-check`: it changes nothing and exits 1 when a file needs
-formatting.
+A path argument is a file or a directory, and sqol walks a directory for its
+`.sql` files. Without a path it walks the working directory, and without a flag
+it prints the result to standard output. `-l` and `-d` change nothing and exit 1
+when a file needs formatting, so a CI job can run either as a gate.
 
 ## What it does and does not do
 
