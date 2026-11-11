@@ -1,0 +1,12 @@
+# Binaries
+/sqol
+/sqol.exe
+/bin/
+*.exe
+*.test
+*.out
+
+# Editor and tooling state
+.qodo/
+.vscode/
+node_modules/
