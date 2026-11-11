@@ -22,8 +22,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: false
@@ -38,16 +38,16 @@ jobs:
       run:
         working-directory: editors/vscode
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: editors/vscode/package.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: editors/vscode/.node-version
           cache: pnpm
           cache-dependency-path: editors/vscode/pnpm-lock.yaml
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: false
@@ -56,12 +56,7 @@ jobs:
       - run: pnpm exec tsc -p .
       # Packaging is checked here too: a wrong ignore rule drops the entry
       # point, and only the package step notices.
-      - name: install just
-        run: go install github.com/casey/just@v1.58.0
-        working-directory: .
-      - name: build the five binaries
-        run: just binaries
-        working-directory: .
+      - uses: ./.github/actions/binaries
       - run: pnpm exec vsce package --out sqol.vsix
 
   release:
@@ -78,25 +73,22 @@ jobs:
       run:
         working-directory: editors/vscode
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: false
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: editors/vscode/package.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: editors/vscode/.node-version
           cache: pnpm
           cache-dependency-path: editors/vscode/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
 
-      # just is a Go program, so installing it needs no third-party action.
-      - name: install just
-        run: go install github.com/casey/just@v1.58.0
-        working-directory: .
+      - uses: ./.github/actions/binaries
 
       # The extension version and the tag have to name the same release:
       # publishing 0.1.0 twice is refused by the Marketplace.
@@ -109,9 +101,7 @@ jobs:
             exit 1
           fi
 
-      - name: build the five binaries
-        run: just binaries
-        working-directory: .
+      - uses: ./.github/actions/binaries
 
       - name: package the extension
         run: pnpm exec vsce package --out "sqol-${GITHUB_REF_NAME}.vsix"

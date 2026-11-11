@@ -1,0 +1,4 @@
+# The repository is checked out on Windows and on Linux, and both the Go
+# formatter and the SQL formatter compare text byte by byte: a CRLF checkout
+# fails them on Windows only.
+* text=auto eol=lf

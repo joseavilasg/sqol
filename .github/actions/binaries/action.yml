@@ -1,0 +1,18 @@
+name: binaries
+description: Builds the five sqol binaries the extension ships, named by Go target.
+
+runs:
+  using: composite
+  steps:
+    - name: build
+      shell: bash
+      run: |
+        mkdir -p editors/vscode/bin
+        for target in windows-amd64 linux-amd64 linux-arm64 darwin-amd64 darwin-arm64; do
+          os=${target%-*}
+          arch=${target#*-}
+          out="editors/vscode/bin/sqol-${target}"
+          if [ "$os" = windows ]; then out="${out}.exe"; fi
+          CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
+            go build -trimpath -ldflags "-s -w" -o "$out" ./...
+        done
