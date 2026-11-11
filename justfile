@@ -16,10 +16,10 @@ build:
 test:
     go test ./...
 
-# Reports formatting and vet problems.
+# Reports vet problems and a file an editor left unformatted.
 lint:
-    gofmt -l .
     go vet ./...
+    go test -run TestTheTreeIsGofmtClean ./...
 
 # Fails when a file would change, so a CI job can run it as a gate.
 check:

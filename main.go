@@ -104,10 +104,22 @@ func collect(args []string) ([]string, error) {
 			continue
 		}
 		err = filepath.WalkDir(arg, func(path string, entry fs.DirEntry, err error) error {
-			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".sql") {
+			if err != nil {
 				return err
 			}
-			files = append(files, path)
+			if entry.IsDir() {
+				// A directory named on the command line is always walked, but
+				// the ones inside it are not: version control and build output
+				// hold no SQL worth formatting, and walking them costs more
+				// than it finds.
+				if path != arg && skippedDir(entry.Name()) {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if strings.HasSuffix(path, ".sql") {
+				files = append(files, path)
+			}
 			return nil
 		})
 		if err != nil {
@@ -115,6 +127,12 @@ func collect(args []string) ([]string, error) {
 		}
 	}
 	return files, nil
+}
+
+// skippedDir reports a directory the walk does not enter: the hidden ones,
+// which carry tool state, and the three trees a build writes.
+func skippedDir(name string) bool {
+	return strings.HasPrefix(name, ".") || name == "node_modules" || name == "bin" || name == "out"
 }
 
 // rewrite formats one file and applies whichever result the flags asked for.

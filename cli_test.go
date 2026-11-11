@@ -6,6 +6,35 @@ import (
 	"testing"
 )
 
+func TestCollectSkipsTheTreesABuildOwns(t *testing.T) {
+	root := t.TempDir()
+	for _, dir := range []string{"node_modules/pkg", ".git", "bin", "out", "queries"} {
+		if err := os.MkdirAll(filepath.Join(root, dir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, name := range []string{
+		"node_modules/pkg/a.sql",
+		".git/b.sql",
+		"bin/c.sql",
+		"out/d.sql",
+		"queries/e.sql",
+	} {
+		path := filepath.Join(root, name)
+		if err := os.WriteFile(path, []byte("SELECT 1;\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	files, err := collect([]string{root})
+	if err != nil {
+		t.Fatalf("collect: %v", err)
+	}
+	if len(files) != 1 || filepath.Base(files[0]) != "e.sql" {
+		t.Errorf("collected %v, want only queries/e.sql", files)
+	}
+}
+
 func TestCollectWalksADirectoriesForSQLFiles(t *testing.T) {
 	root := t.TempDir()
 	nested := filepath.Join(root, "nested")
