@@ -10,7 +10,7 @@ default:
 
 # Builds the command for this machine.
 build:
-    go build -trimpath -ldflags "-s -w" -o bin/sqol ./...
+    go build -trimpath -ldflags "-s -w" -o bin/sqol .
 
 # Runs the tests.
 test:
@@ -23,7 +23,7 @@ lint:
 
 # Fails when a file would change, so a CI job can run it as a gate.
 check:
-    go run ./... -l .
+    go run . -l .
 
 # Builds the five binaries the editor extension ships, named by Go target.
 binaries: binary-windows-amd64 binary-linux-amd64 binary-linux-arm64 binary-darwin-amd64 binary-darwin-arm64
@@ -33,31 +33,31 @@ binaries: binary-windows-amd64 binary-linux-amd64 binary-linux-arm64 binary-darw
 [env('GOARCH', 'amd64')]
 [env('CGO_ENABLED', '0')]
 binary-windows-amd64:
-    go build -trimpath -ldflags "-s -w" -o editors/vscode/bin/sqol-windows-amd64.exe ./...
+    go build -trimpath -ldflags "-s -w" -o editors/vscode/bin/sqol-windows-amd64.exe .
 
 [env('GOOS', 'linux')]
 [env('GOARCH', 'amd64')]
 [env('CGO_ENABLED', '0')]
 binary-linux-amd64:
-    go build -trimpath -ldflags "-s -w" -o editors/vscode/bin/sqol-linux-amd64 ./...
+    go build -trimpath -ldflags "-s -w" -o editors/vscode/bin/sqol-linux-amd64 .
 
 [env('GOOS', 'linux')]
 [env('GOARCH', 'arm64')]
 [env('CGO_ENABLED', '0')]
 binary-linux-arm64:
-    go build -trimpath -ldflags "-s -w" -o editors/vscode/bin/sqol-linux-arm64 ./...
+    go build -trimpath -ldflags "-s -w" -o editors/vscode/bin/sqol-linux-arm64 .
 
 [env('GOOS', 'darwin')]
 [env('GOARCH', 'amd64')]
 [env('CGO_ENABLED', '0')]
 binary-darwin-amd64:
-    go build -trimpath -ldflags "-s -w" -o editors/vscode/bin/sqol-darwin-amd64 ./...
+    go build -trimpath -ldflags "-s -w" -o editors/vscode/bin/sqol-darwin-amd64 .
 
 [env('GOOS', 'darwin')]
 [env('GOARCH', 'arm64')]
 [env('CGO_ENABLED', '0')]
 binary-darwin-arm64:
-    go build -trimpath -ldflags "-s -w" -o editors/vscode/bin/sqol-darwin-arm64 ./...
+    go build -trimpath -ldflags "-s -w" -o editors/vscode/bin/sqol-darwin-arm64 .
 
 # Compiles and checks the editor extension.
 extension:

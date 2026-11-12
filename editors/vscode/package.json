@@ -2,7 +2,7 @@
   "name": "sqol",
   "displayName": "SQoL",
   "description": "Format SQL with SQoL, an opinionated formatter that keeps one clause per line.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "joseavilasg",
   "license": "MIT",
   "repository": {

@@ -1,4 +1,4 @@
-package main
+package formatter
 
 import (
 	"os"
@@ -10,7 +10,7 @@ import (
 // file and the shape it has to end in.
 func formatted(t *testing.T, raw string) string {
 	t.Helper()
-	out, err := settle(raw)
+	out, err := Settle(raw)
 	if err != nil {
 		t.Fatalf("settling: %v", err)
 	}
@@ -101,19 +101,19 @@ WHERE a = 1
 // what the rule produces, so one the formatter would change is either stale or
 // a regression in the rule itself.
 func TestEveryFixtureIsSettled(t *testing.T) {
-	paths, err := filepath.Glob(filepath.Join("testdata", "*", "*.sql"))
+	paths, err := filepath.Glob(filepath.Join("..", "testdata", "*", "*.sql"))
 	if err != nil {
 		t.Fatalf("listing the fixtures: %v", err)
 	}
 	if len(paths) == 0 {
-		t.Fatal("no fixtures under testdata")
+		t.Fatal("no fixtures under ../testdata")
 	}
 	for _, path := range paths {
 		raw, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
-		settled, err := settle(string(raw))
+		settled, err := Settle(string(raw))
 		if err != nil {
 			t.Errorf("%s: %v", path, err)
 			continue

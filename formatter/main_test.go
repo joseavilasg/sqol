@@ -1,4 +1,4 @@
-package main
+package formatter
 
 import (
 	"strings"
@@ -281,7 +281,7 @@ func TestFormatAlinesTheTermsOfAnExpression(t *testing.T) {
 	// The shape of the whole expression is settled, not the shape of one pass:
 	// hanging a parenthesis costs a pass per level, so the command applies the
 	// rewrite until the text stops moving.
-	settled, err := settle(in)
+	settled, err := Settle(in)
 	if err != nil {
 		t.Fatalf("settle: %v", err)
 	}
@@ -471,7 +471,7 @@ func TestFormatSplitsAUnionThatSharesItsLine(t *testing.T) {
 	}
 	// The keyword only learns it sits inside the parenthesis on the next pass,
 	// so the settled text must not change again.
-	settled, err := settle(in)
+	settled, err := Settle(in)
 	if err != nil {
 		t.Fatalf("settle: %v", err)
 	}

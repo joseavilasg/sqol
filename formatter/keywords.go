@@ -1,4 +1,4 @@
-package main
+package formatter
 
 import (
 	"strings"
@@ -67,47 +67,63 @@ func uppercaseKeywords(raw string) string {
 	var b strings.Builder
 	b.Grow(len(raw))
 	last := 0
-
-	for i := 0; i < len(masked); i++ {
-		if !isWordByte(masked[i]) {
+	for start := 0; start < len(masked); {
+		end := wordEnd(masked, start)
+		if end == start {
+			start++
 			continue
 		}
-		start := i
-		for i < len(masked) && isWordByte(masked[i]) {
-			i++
+		if form, ok := keywordForm(raw, masked, start, end); ok {
+			b.WriteString(raw[last:start])
+			b.WriteString(form)
+			last = end
 		}
-		word := raw[start:i]
-		if i-start != len(word) {
-			continue
-		}
-		upper := strings.ToUpper(word)
-		if upper == word {
-			continue
-		}
-		isCall := nextByte(masked, i) == '('
-		switch {
-		case isCall && functions[upper]:
-		case !isCall && keywords[upper]:
-		default:
-			continue
-		}
-		// FIRST and LAST are only keywords right after NULLS; anywhere else they
-		// can name an alias, and an alias keeps the case it was written in.
-		if (upper == "FIRST" || upper == "LAST") && !strings.EqualFold(lastWord(masked, start), "NULLS") {
-			continue
-		}
-		if prevByte(masked, start) == '.' || nextByte(masked, i) == '.' {
-			continue
-		}
-		b.WriteString(raw[last:start])
-		b.WriteString(upper)
-		last = i
+		start = end
 	}
 	if last == 0 {
 		return raw
 	}
 	b.WriteString(raw[last:])
 	return b.String()
+}
+
+// wordEnd returns the first byte at or after start that is not part of a word.
+func wordEnd(s string, start int) int {
+	for start < len(s) && isWordByte(s[start]) {
+		start++
+	}
+	return start
+}
+
+// keywordForm returns the upper-case keyword for the word between start and end,
+// and whether that word is one.
+func keywordForm(raw, masked string, start, end int) (string, bool) {
+	word := raw[start:end]
+	if end-start != len(word) {
+		return "", false
+	}
+	upper := strings.ToUpper(word)
+	if upper == word || !knownWord(masked, upper, end) {
+		return "", false
+	}
+	// FIRST and LAST are only keywords right after NULLS; anywhere else they can
+	// name an alias, and an alias keeps the case it was written in.
+	if (upper == "FIRST" || upper == "LAST") && !strings.EqualFold(lastWord(masked, start), "NULLS") {
+		return "", false
+	}
+	if prevByte(masked, start) == '.' || nextByte(masked, end) == '.' {
+		return "", false
+	}
+	return upper, true
+}
+
+// knownWord reports whether a word is a keyword where it stands: a function when
+// it is called, and a plain keyword otherwise.
+func knownWord(masked, upper string, end int) bool {
+	if nextByte(masked, end) == '(' {
+		return functions[upper]
+	}
+	return keywords[upper]
 }
 
 // lastWord returns the word that ends before start, skipping the spaces, or an
